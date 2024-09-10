@@ -342,6 +342,27 @@ public:
                 const scalarField& scale
             ) const;
 
+            //- Transform the given initial state pointField by the current
+            //  motion state scaled by the given scale
+            tmp<pointField> transform
+            (
+                const pointField& initialPoints,
+                const scalar& xdist,
+                const scalar& ydist,
+                const scalarField& scale,
+                const scalarField& xScale,
+                const scalarField& yScale
+            ) const;
+
+            void updateXYScale
+            (
+                const pointField& initialPoints,
+                const scalar& xdist,
+                const scalar& ydist,
+                const scalarField& scale,
+                scalarField& xScale,
+                scalarField& yScale
+            ) const;
 
         //- Write
         void write(Ostream&) const;

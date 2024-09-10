@@ -76,6 +76,13 @@ class sixDoFRigidBodyMotionSolver
         //- Outer morphing distance (limit of linear interpolation region)
         const scalar do_;
 
+        //---MorphMod{ 
+        //- Morphing distances of x- and y-directions respectively (length of linear interpolation region)
+        const scalar xdist_;
+
+        const scalar ydist_;
+        //---MorphMod}
+
         //- Test-mode in which only the gravitational body-force is applied
         bool test_;
 
@@ -90,6 +97,14 @@ class sixDoFRigidBodyMotionSolver
 
         //- Current interpolation scale (1 at patches, 0 at distance_)
         pointScalarField scale_;
+
+        //---MorphMod{
+        //- X-coordinate scale field (1 is rigid body transform, 0 is static mesh) 
+        pointScalarField xscale_; 
+
+        //- Y-coordinate scale field (1 is rigid body transform, 0 is static mesh)
+        pointScalarField yscale_;
+        //---MorphMod}
 
         //- Current time index (used for updating)
         label curTimeIndex_;
@@ -109,6 +124,11 @@ class sixDoFRigidBodyMotionSolver
         //- No copy assignment
         void operator=(const sixDoFRigidBodyMotionSolver&) = delete;
 
+        //---MorphMod{
+        //- 
+        void cosineTransition(pointScalarField& scale);
+        
+        //---MorphMod}
 
 public:
 

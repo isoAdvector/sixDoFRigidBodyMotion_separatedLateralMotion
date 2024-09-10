@@ -49,6 +49,27 @@ namespace Foam
     );
 }
 
+//---ModMorph{
+// * * * * * Private member functions * * * * * //
+void Foam::sixDoFRigidBodyMotionSolver::cosineTransition(pointScalarField& scale)
+{
+    // Convert the scale function to a cosine
+        scale.primitiveFieldRef() =
+            min
+            (
+                max
+                (
+                    0.5
+                  - 0.5
+                   *cos(scale.primitiveField()
+                   *Foam::constant::mathematical::pi),
+                    scalar(0)
+                ),
+                scalar(1)
+            );
+        return;
+};
+//---ModMorph}
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -89,6 +110,8 @@ Foam::sixDoFRigidBodyMotionSolver::sixDoFRigidBodyMotionSolver
     patchSet_(mesh.boundaryMesh().patchSet(patches_)),
     di_(coeffDict().get<scalar>("innerDistance")),
     do_(coeffDict().get<scalar>("outerDistance")),
+    xdist_(coeffDict().getOrDefault<scalar>("xDistance",-1)),   // ModMorph: -1 means not used
+    ydist_(coeffDict().getOrDefault<scalar>("yDistance",-1)),   // ModMorph: -1 means not used
     test_(coeffDict().getOrDefault("test", false)),
     rhoInf_(1.0),
     rhoName_(coeffDict().getOrDefault<word>("rho", "rho")),
@@ -97,6 +120,34 @@ Foam::sixDoFRigidBodyMotionSolver::sixDoFRigidBodyMotionSolver
         IOobject
         (
             "motionScale",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            IOobject::NO_REGISTER
+        ),
+        pointMesh::New(mesh),
+        dimensionedScalar(dimless, Zero)
+    ),
+    xscale_
+    (
+        IOobject
+        (
+            "xmotionScale",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            IOobject::NO_REGISTER
+        ),
+        pointMesh::New(mesh),
+        dimensionedScalar(dimless, Zero)
+    ),
+    yscale_
+    (
+        IOobject
+        (
+            "ymotionScale",
             mesh.time().timeName(),
             mesh,
             IOobject::NO_READ,
@@ -135,22 +186,28 @@ Foam::sixDoFRigidBodyMotionSolver::sixDoFRigidBodyMotionSolver
             );
 
         // Convert the scale function to a cosine
-        scale_.primitiveFieldRef() =
-            min
-            (
-                max
-                (
-                    0.5
-                  - 0.5
-                   *cos(scale_.primitiveField()
-                   *Foam::constant::mathematical::pi),
-                    scalar(0)
-                ),
-                scalar(1)
-            );
-
+        cosineTransition(scale_);   // ModMorph adaptation to shorten code. 
         pointConstraints::New(pMesh).constrain(scale_);
         scale_.write();
+
+        //---ModMorph{
+        // Compute x or y scale transitions
+        // Note: Put implementation in motion_ to allow for parallel computing.
+        if (xdist_>0 || ydist_>0)
+        {
+            motion_.updateXYScale(points0(), xdist_, ydist_, scale_, xscale_, yscale_);
+            if (xdist_>0)
+            {   cosineTransition(xscale_);      
+                pointConstraints::New(pMesh).constrain(xscale_);
+                xscale_.write();
+            }
+            if (ydist_>0)
+            {   cosineTransition(yscale_);     
+                pointConstraints::New(pMesh).constrain(yscale_);
+                yscale_.write();
+            }
+        } 
+        //---ModMorph}
     }
 }
 
@@ -284,8 +341,19 @@ void Foam::sixDoFRigidBodyMotionSolver::solve()
     }
 
     // Update the displacements
-    pointDisplacement_.primitiveFieldRef() =
-        motion_.transform(points0(), scale_) - points0();
+    //--- ModMorph{
+    // Update x- or y-compensated morphed positions
+    if (xdist_ >0 || ydist_>0)
+    {
+        pointDisplacement_.primitiveFieldRef() =
+            motion_.transform(points0(), xdist_, ydist_, scale_, xscale_, yscale_) - points0();   
+    }
+    else // do normal morphing operation. 
+    {
+        pointDisplacement_.primitiveFieldRef() =
+            motion_.transform(points0(), scale_) - points0();
+    }
+    //--- ModMorph}
 
     // Displacement has changed. Update boundary conditions
     pointConstraints::New

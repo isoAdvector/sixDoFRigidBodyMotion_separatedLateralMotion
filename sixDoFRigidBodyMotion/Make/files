@@ -37,4 +37,4 @@ sixDoFSolvers/symplectic/symplectic.C
 sixDoFSolvers/CrankNicolson/CrankNicolson.C
 sixDoFSolvers/Newmark/Newmark.C
 
-LIB = $(FOAM_LIBBIN)/libsixDoFRigidBodyMotion
+LIB = $(FOAM_USER_LIBBIN)/libsixDoFRigidBodyModifiedMeshMotion
