@@ -16,7 +16,7 @@ FoamFile
 
 dynamicFvMesh       dynamicMotionSolverFvMesh;
 
-motionSolverLibs    (sixDoFRigidBodyModifiedMeshMotion);
+motionSolverLibs    (sixDoFRigidBodyMotion);
 motionSolver        sixDoFRigidBodyMotion;
 
 sixDoFRigidBodyMotionCoeffs

@@ -1,0 +1,5 @@
+Demonstrating unchanged behaviour for floatingObject tutorial run with modified
+sixDoFRigidBodyMotion library. Run original and modified cases and compare with
+paraview using compare.pvsm script.
+
+Run times: Original: 93 s, Modified: 96 s
