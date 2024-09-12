@@ -110,6 +110,7 @@ Foam::sixDoFRigidBodyMotionSolver::sixDoFRigidBodyMotionSolver
     patchSet_(mesh.boundaryMesh().patchSet(patches_)),
     di_(coeffDict().get<scalar>("innerDistance")),
     do_(coeffDict().get<scalar>("outerDistance")),
+    outerDistanceDomainCheck_(coeffDict().getOrDefault("containOuterDistance",false)),
     xdist_(coeffDict().getOrDefault<scalar>("xDistance",-1)),   // ModMorph: -1 means not used
     ydist_(coeffDict().getOrDefault<scalar>("yDistance",-1)),   // ModMorph: -1 means not used
     test_(coeffDict().getOrDefault("test", false)),
@@ -170,9 +171,34 @@ Foam::sixDoFRigidBodyMotionSolver::sixDoFRigidBodyMotionSolver
 
     {
         const pointMesh& pMesh = pointMesh::New(mesh);
-
-        pointPatchDist pDist(pMesh, patchSet_, points0());
-
+        //---ModMorph{
+        // Ensure that do_ does not reach beyond the domain. 
+        // Note: This is only applicable for rectangular domains aligned with the main coordinate system. 
+        tensor scales = tensor::I;
+        if (outerDistanceDomainCheck_)
+        {
+            // Modification to avoid outer distance to go beyond the domain. 
+            // Uses boundBox for minimal distance between rectangular domain and body patches. 
+            point minPoint = mesh.bounds().min();
+            point maxPoint = mesh.bounds().max();
+            
+            forAll(patches_,pp) // for all patches of the body, check bounding box and compute scale factor. 
+            {   
+                const label patchi = mesh.boundaryMesh().findPatchID(patches_[pp]);
+                const pointField& pf = pMesh.boundary()[patchi].localPoints(); // get local patch points
+                boundBox bb(pf); // compute bounding box of current patch pointField 
+                point deltaMax = maxPoint-bb.max(); 
+                point deltaMin = bb.min()-minPoint;
+                // Compute scale factor for different coordinate directions 
+                scales.xx() = max(scales.xx(), do_/min(deltaMax.x(), deltaMin.x()));
+                scales.yy() = max(scales.yy(), do_/min(deltaMax.y(), deltaMin.y()));
+                scales.zz() = max(scales.zz(), do_/min(deltaMax.z(), deltaMin.z()));
+            }
+        }
+        pointPatchDist pDist(pMesh, patchSet_, (scales & points0()));
+        //pointPatchDist pDist(pMesh, patchSet_, points0());
+        //---ModMorph}
+        
         // Scaling: 1 up to di then linear down to 0 at do away from patches
         scale_.primitiveFieldRef() =
             min

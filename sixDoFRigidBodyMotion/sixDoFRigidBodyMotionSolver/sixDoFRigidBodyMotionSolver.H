@@ -77,6 +77,9 @@ class sixDoFRigidBodyMotionSolver
         const scalar do_;
 
         //---MorphMod{ 
+        //- Switch to use the domain check for the outer distance
+        bool outerDistanceDomainCheck_; 
+        
         //- Morphing distances of x- and y-directions respectively (length of linear interpolation region)
         const scalar xdist_;
 
